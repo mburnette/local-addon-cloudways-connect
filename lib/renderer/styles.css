@@ -1,0 +1,426 @@
+/* Host Connect for Cloudways. Colours lean on currentColor/transparency so the panel follows Local's light and dark themes. */
+
+.CWConnect {
+	padding: 20px 30px 30px;
+	max-width: 720px;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.CWConnect_Title {
+	margin-bottom: 14px;
+}
+
+.CWConnect_SectionTitle {
+	margin: 22px 0 10px;
+}
+
+.CWConnect_Intro {
+	margin: 0 0 16px;
+	opacity: 0.8;
+}
+
+.CWConnect_Tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 18px;
+	border-bottom: 1px solid rgba(127, 127, 127, 0.3);
+}
+
+.CWConnect_Tab {
+	appearance: none;
+	background: none;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	font-weight: 600;
+	margin-bottom: -1px;
+	opacity: 0.65;
+	padding: 8px 12px;
+}
+
+.CWConnect_Tab.is-active {
+	border-bottom-color: #51bb7b;
+	opacity: 1;
+}
+
+.CWConnect_Tab:focus-visible {
+	outline: 2px solid #51bb7b;
+	outline-offset: 2px;
+}
+
+.CWConnect_Form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.CWConnect_Row {
+	display: grid;
+	grid-template-columns: 1fr 90px;
+	gap: 12px;
+}
+
+.CWConnect_Field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.CWConnect_FieldLabel {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.CWConnect_Help {
+	font-size: 12px;
+	opacity: 0.7;
+}
+
+.CWConnect_Help a {
+	color: #51bb7b;
+}
+
+/*
+ * Fully styled instead of the native macOS control, which has a fixed height and clips padded text. The
+ * chevron is a mid-grey that reads on both themes; color-scheme keeps the popup menu in Local's theme.
+ */
+.CWConnect_Select {
+	-webkit-appearance: none;
+	appearance: none;
+	background-color: transparent;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23999' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-position: right 14px center;
+	background-repeat: no-repeat;
+	border: 1px solid rgba(127, 127, 127, 0.45);
+	border-radius: 4px;
+	box-sizing: border-box;
+	color: inherit;
+	color-scheme: light dark;
+	cursor: pointer;
+	font: inherit;
+	height: auto;
+	line-height: 1.4;
+	min-height: 44px;
+	overflow: hidden;
+	padding: 10px 40px 10px 14px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: 100%;
+}
+
+.CWConnect_Select:hover {
+	border-color: rgba(127, 127, 127, 0.7);
+}
+
+.CWConnect_Select:focus-visible {
+	border-color: #51bb7b;
+	outline: none;
+	box-shadow: 0 0 0 1px #51bb7b;
+}
+
+.CWConnect_AuthChoice {
+	display: flex;
+	gap: 20px;
+}
+
+.CWConnect_AuthChoice label {
+	cursor: pointer;
+}
+
+.CWConnect_KeyBox {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.CWConnect_KeyText {
+	background: rgba(127, 127, 127, 0.08);
+	border: 1px solid rgba(127, 127, 127, 0.35);
+	border-radius: 4px;
+	box-sizing: border-box;
+	color: inherit;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 11px;
+	padding: 8px;
+	resize: none;
+	width: 100%;
+	word-break: break-all;
+}
+
+.CWConnect_Account {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+}
+
+.CWConnect_Table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.CWConnect_Table th,
+.CWConnect_Table td {
+	border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+	padding: 8px 0;
+	text-align: left;
+	vertical-align: top;
+}
+
+.CWConnect_Table th {
+	font-weight: 600;
+	padding-right: 20px;
+	white-space: nowrap;
+	width: 130px;
+}
+
+.CWConnect_Table td {
+	word-break: break-all;
+}
+
+.CWConnect_Options {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.CWConnect_Consequences {
+	margin: 16px 0 0;
+	opacity: 0.8;
+	padding-left: 18px;
+}
+
+.CWConnect_Actions {
+	align-items: center;
+	display: flex;
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.CWConnect_Secondary {
+	align-items: center;
+	border-top: 1px solid rgba(127, 127, 127, 0.2);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-top: 24px;
+	padding-top: 16px;
+}
+
+.CWConnect_Busy {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+	opacity: 0.8;
+}
+
+.CWConnect_Error,
+.CWConnect_Warning,
+.CWConnect_Success {
+	border-radius: 4px;
+	font-size: 13px;
+	margin-top: 12px;
+	padding: 10px 12px;
+	white-space: pre-wrap;
+}
+
+.CWConnect_Error {
+	background: rgba(226, 67, 67, 0.12);
+	border: 1px solid rgba(226, 67, 67, 0.45);
+}
+
+.CWConnect_Warning {
+	background: rgba(241, 177, 66, 0.14);
+	border: 1px solid rgba(241, 177, 66, 0.45);
+}
+
+.CWConnect_Success {
+	background: rgba(81, 187, 123, 0.12);
+	border: 1px solid rgba(81, 187, 123, 0.45);
+}
+
+.CWConnect_Modal {
+	padding: 10px 10px 0;
+	text-align: left;
+	width: 520px;
+	max-width: 100%;
+}
+
+.CWConnect_Tabs--Transfer {
+	margin-top: 24px;
+}
+
+.CWConnect_HeaderButtons {
+	align-items: center;
+	display: inline-flex;
+	gap: 8px;
+	margin-left: 10px;
+}
+
+.CWConnect_HeaderLabel {
+	font-size: 12px;
+	font-weight: 600;
+	opacity: 0.7;
+}
+
+.CWConnect_HeaderButton {
+	white-space: nowrap;
+}
+
+/* Compare & sync */
+
+.CWConnect_Actions--Top {
+	margin-top: 0;
+}
+
+.CWConnect_Summary {
+	font-weight: 600;
+	margin: 16px 0 10px;
+}
+
+.CWConnect_Filter {
+	margin-bottom: 12px;
+}
+
+.CWConnect_Group {
+	border: 1px solid rgba(127, 127, 127, 0.25);
+	border-radius: 4px;
+	margin-bottom: 12px;
+	max-height: 360px;
+	overflow-y: auto;
+}
+
+.CWConnect_GroupHeader {
+	align-items: center;
+	background: rgba(127, 127, 127, 0.08);
+	cursor: pointer;
+	display: flex;
+	font-weight: 600;
+	gap: 8px;
+	padding: 8px 10px;
+	position: sticky;
+	top: 0;
+}
+
+.CWConnect_FileRow {
+	align-items: baseline;
+	border-top: 1px solid rgba(127, 127, 127, 0.15);
+	cursor: pointer;
+	display: grid;
+	gap: 4px 8px;
+	grid-template-columns: auto 1fr;
+	padding: 6px 10px;
+}
+
+.CWConnect_FileRow:hover {
+	background: rgba(127, 127, 127, 0.06);
+}
+
+.CWConnect_FilePath {
+	font-family: Menlo, Consolas, monospace;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.CWConnect_FileMeta {
+	display: flex;
+	flex-wrap: wrap;
+	font-size: 12px;
+	gap: 4px 12px;
+	grid-column: 2;
+	opacity: 0.75;
+}
+
+.CWConnect_Badge {
+	border: 1px solid currentColor;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 0 7px;
+}
+
+.CWConnect_Badge--local {
+	color: #3b82c4;
+}
+
+.CWConnect_Badge--remote {
+	color: #d9822b;
+}
+
+.CWConnect_SyncBar {
+	background: inherit;
+	bottom: 0;
+	justify-content: flex-end;
+	padding: 10px 0;
+	position: sticky;
+}
+
+.CWConnect_SyncBar > span {
+	margin-right: auto;
+	opacity: 0.8;
+}
+
+/* Pull to a new site */
+
+.CWConnect_NewSite {
+	margin: 0 auto;
+	max-width: 640px;
+	padding-top: 30px;
+}
+
+.CWConnect_NewSiteHeader {
+	align-items: center;
+	display: flex;
+	gap: 16px;
+	margin-bottom: 8px;
+}
+
+.CWConnect_NewSiteHeader .CWConnect_Title {
+	margin-bottom: 0;
+}
+
+.CWConnect_SecretInput {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+}
+
+.CWConnect_SecretInput > :first-child {
+	flex: 1;
+}
+
+/* Update notice and version line */
+.CWConnect_Update {
+	background: rgba(48, 57, 184, 0.08);
+	border: 1px solid rgba(48, 57, 184, 0.35);
+	border-radius: 4px;
+	display: flex;
+	flex-direction: column;
+	font-size: 13px;
+	gap: 8px;
+	margin: 0 0 16px;
+	padding: 10px 12px;
+}
+
+.CWConnect_UpdateActions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.CWConnect_Version {
+	align-items: center;
+	border-top: 1px solid rgba(128, 128, 128, 0.2);
+	display: flex;
+	flex-wrap: wrap;
+	font-size: 12px;
+	gap: 12px;
+	margin-top: 32px;
+	opacity: 0.75;
+	padding-top: 12px;
+}

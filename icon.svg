@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Host Connect for Cloudways">
+  <rect width="64" height="64" rx="14" fill="#3039b8"/>
+  <!-- Cloudways cloud mark, traced from the brand logo (116 x 60 units) -->
+  <g transform="translate(6.4 18.8) scale(.44)" fill="#fff">
+    <circle cx="76.8" cy="25.6" r="25.5"/>
+    <circle cx="97.3" cy="38.8" r="19.1"/>
+    <circle cx="55.9" cy="38.9" r="18.5"/>
+    <path d="M55.9 30H110.9V46.7A13.25 13.25 0 0 1 97.6 59.95H55.9Z"/>
+    <path d="M23.75 6.4H76.8M18.2 19.1H76.8M2.85 31.7H76.8M4.5 44.5H23.5M36 44.5H76.8M20.6 57.1H76.8" fill="none" stroke="#fff" stroke-width="5.7" stroke-linecap="round"/>
+  </g>
+</svg>

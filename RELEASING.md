@@ -1,0 +1,52 @@
+# Releasing Host Connect for Cloudways
+
+Every GitHub release with a `.tgz` attached is an update. Installed copies check for one when Local starts and every
+12 hours after that, or right away from **Check for updates** at the bottom of the add-on's panel. When there is
+an update, the panel shows an **Update** button, which installs it through Local's own add-on installer and then
+offers to restart Local.
+
+## One-time setup
+
+1. Install the GitHub CLI and sign in. Run `brew install gh`, then `gh auth login`.
+2. Install the dependencies in this folder with `npm install`. The release bundles `@getflywheel/local-components` and `lodash` into the `.tgz`, so they must be installed.
+
+## Make a release
+
+1. Commit your changes to `main`.
+2. Run one of these:
+
+   ```bash
+   npm run release -- patch
+   ```
+
+   - `patch` for fixes (0.1.0 → 0.1.1)
+   - `minor` for new features (0.1.0 → 0.2.0)
+   - `major` for breaking changes (0.1.0 → 1.0.0)
+   - an exact version, such as `npm run release -- 0.3.0`
+
+   Add `--notes "What changed"` to write the release notes yourself. Without it, GitHub lists the commits since the last release.
+
+The script:
+
+1. stops if you have uncommitted changes or aren't on `main`;
+2. runs `npm run lint` and `npm test`;
+3. bumps the version in `package.json`;
+4. packs the `.tgz`;
+5. commits `Release vX.Y.Z`, tags it and pushes;
+6. creates the GitHub release with the `.tgz` attached.
+
+To check a build without publishing anything, run:
+
+```bash
+npm run release -- patch --dry-run
+```
+
+It leaves the `.tgz` in the folder so you can try it with Local's **Add-ons → Install from disk**.
+
+## Things to know
+
+- **Each version number can be released only once.** If a release is broken, publish a new patch release instead of reusing the tag.
+- **Draft and pre-release releases are ignored.** The add-on asks GitHub for the latest full release, which skips drafts and pre-releases. Mark a release as a pre-release to share a test build without offering it to everyone.
+- **Development copies never update themselves.** If Local's add-ons folder holds a symlink to this folder (from `npm run install-addon`), the panel tells you an update exists but has no Update button. Pull the changes with git instead.
+- **Raising the required Local version.** If a release needs a newer Local, raise `engines.local-by-flywheel` in `package.json`. Local refuses to install the update on older versions and says why.
+- **Anyone can download releases.** The repository is public.
