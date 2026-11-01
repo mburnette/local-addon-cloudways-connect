@@ -327,11 +327,11 @@ test('create-site page pulls a Cloudways app into a new Local site', async () =>
 });
 
 test('shows an available update and installs it through the main process', async () => {
-	const update = { name: 'Host Connect for Cloudways', current: '0.1.0', latest: '0.2.0', releaseUrl: 'https://github.com/x/y/releases/tag/v0.2.0', devInstall: false, checking: false, installing: false, installed: false, error: null };
+	const update = { name: 'ConnectLocal for Cloudways', current: '0.1.0', latest: '0.2.0', releaseUrl: 'https://github.com/x/y/releases/tag/v0.2.0', devInstall: false, checking: false, installing: false, installed: false, error: null };
 	mainState = { account: null, link: null, activity: null, publicKey: null, passwordAuthSupported: true, update };
 	ipcCalls.length = 0;
 	const root = await mount(toolsPanel());
-	assert.match(root.textContent, /Host Connect for Cloudways 0\.2\.0 is available\. You have 0\.1\.0\./);
+	assert.match(root.textContent, /ConnectLocal for Cloudways 0\.2\.0 is available\. You have 0\.1\.0\./);
 	await click(button(root, 'Update'));
 	assert.ok(ipcCalls.some(([channel]) => channel === IPC.INSTALL_UPDATE));
 
@@ -344,7 +344,7 @@ test('shows an available update and installs it through the main process', async
 });
 
 test('a development copy shows the update but no Update button, and the footer can check manually', async () => {
-	const update = { name: 'Host Connect for Cloudways', current: '0.1.0', latest: null, releaseUrl: null, devInstall: true, checking: false, installing: false, installed: false, error: null };
+	const update = { name: 'ConnectLocal for Cloudways', current: '0.1.0', latest: null, releaseUrl: null, devInstall: true, checking: false, installing: false, installed: false, error: null };
 	mainState = { account: null, link: null, activity: null, publicKey: null, passwordAuthSupported: true, update: { ...update, latest: '0.2.0' } };
 	let root = await mount(toolsPanel());
 	assert.match(root.textContent, /linked from a development folder/);
@@ -354,7 +354,7 @@ test('a development copy shows the update but no Update button, and the footer c
 	mainState = { ...mainState, update };
 	ipcCalls.length = 0;
 	root = await mount(toolsPanel());
-	assert.match(root.textContent, /Host Connect for Cloudways 0\.1\.0/);
+	assert.match(root.textContent, /ConnectLocal for Cloudways 0\.1\.0/);
 	await click(button(root, 'Check for updates'));
 	assert.ok(ipcCalls.some(([channel]) => channel === IPC.CHECK_UPDATE));
 	assert.match(root.textContent, /You have the latest version\./);

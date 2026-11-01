@@ -1,4 +1,4 @@
-# Host Connect for Cloudways
+# ConnectLocal for Cloudways
 
 A [Local](https://localwp.com) add-on that connects Local to [Cloudways](https://www.cloudways.com) WordPress applications. It works the way Local Connect does for WP Engine and Flywheel. You can:
 
@@ -9,7 +9,7 @@ A [Local](https://localwp.com) add-on that connects Local to [Cloudways](https:/
 
 It reuses Local Connect's approach (see `WPEPushService` and `WPEPullService` in Local 10.1.2):
 
-| Step | WP Engine (built in) | Host Connect for Cloudways |
+| Step | WP Engine (built in) | ConnectLocal for Cloudways |
 | --- | --- | --- |
 | Auth | WP Engine account + Local's SSH key registered via CAPI | A Cloudways access token (`cw_…`), and the add-on's own SSH key registered on an app credential via `POST /ssh_key`. Plain SFTP/SSH credentials also work. |
 | Backup | CAPI backup before push | `POST /app/manage/takeBackup`, polled with `GET /operation/{id}` (optional) |
