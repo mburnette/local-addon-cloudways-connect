@@ -213,11 +213,14 @@ test('pushes to and pulls from a stand-in server over ssh/rsync', { skip: !SSHD 
 	assert.equal(fs.readFileSync(path.join(remoteChild, 'assets', 'app.css'), 'utf8'), 'body{color:#196cdf}');
 	assert.ok(!fs.existsSync(path.join(remoteWeb, 'wp-content', 'themes', 'gone')) && !isLink(path.join(remoteWeb, 'wp-content', 'themes', 'gone')));
 
-	// Database: backup outside the webroot, collations rewritten, temp dump cleaned up
-	assert.ok(fs.existsSync(path.join(appDir, 'local-backup-before-push.sql')));
+	// Database: backup outside the webroot (in the site's own folder in .cloudways-connect, "site-<checksum>" here because
+	// the stand-in app folder is outside the SSH user's home), collations rewritten, temp dump cleaned up
+	const privateRoot = path.join(appDir, '.cloudways-connect');
+	const privateDir = path.join(privateRoot, fs.readdirSync(privateRoot).find((f) => /^(?:public_html|site)-\d+$/.test(f)) || 'missing');
+	assert.ok(fs.existsSync(path.join(privateDir, 'local-backup-before-push.sql')));
 	const imported = fs.readFileSync(path.join(dirs.state, 'imported.sql'), 'utf8');
 	assert.ok(imported.includes('utf8mb4_unicode_520_ci') && !imported.includes('0900'));
-	assert.deepEqual(fs.readdirSync(appDir).filter((f) => f.startsWith('local-push-')), []);
+	assert.deepEqual(fs.readdirSync(privateDir).filter((f) => f.startsWith('local-push-')), []);
 
 	const wpLog = fs.readFileSync(path.join(dirs.state, 'wp.log'), 'utf8');
 	assert.match(wpLog, /wp db reset --yes/);
@@ -231,7 +234,7 @@ test('pushes to and pulls from a stand-in server over ssh/rsync', { skip: !SSHD 
 	assert.equal(statuses[0], 'pushing_v2');
 	assert.equal(statuses[statuses.length - 1], 'running');
 	assert.ok(events.some(([name, banner]) => name === 'showSiteBanner' && banner.id === 'cloudways-site-pushed'));
-	assert.equal(storedLink.privateDir, appDir);
+	assert.equal(storedLink.privateDir, privateDir);
 
 	// ---------------------------------------------------------------- pull
 	fs.mkdirSync(path.join(remoteWeb, 'wp-content', 'uploads'), { recursive: true });
@@ -270,7 +273,7 @@ test('pushes to and pulls from a stand-in server over ssh/rsync', { skip: !SSHD 
 	assert.ok(localWpCalls.includes('search-replace //wordpress-1-2.cloudwaysapps.com //shop.local --all-tables --precise --skip-columns=guid --report-changed-only'));
 	assert.ok(localWpCalls.includes('search-replace https://shop.local http://shop.local --all-tables --precise --skip-columns=guid --report-changed-only'));
 	assert.ok(!localWpCalls.some((c) => c.startsWith('config set')), 'prefixes already match after the push');
-	assert.deepEqual(fs.readdirSync(appDir).filter((f) => f.startsWith('local-pull-')), [], 'remote export cleaned up');
+	assert.deepEqual(fs.readdirSync(privateDir).filter((f) => f.startsWith('local-pull-')), [], 'remote export cleaned up');
 
 	const pullStatuses = events.filter(([name]) => name === 'updateSiteStatus').map(([, , st]) => st);
 	assert.equal(pullStatuses[0], 'pulling');

@@ -103,10 +103,11 @@ Filter by path, tick individual files or whole groups, then click **Push selecte
 ### What a database push does
 
 1. Exports the Local database and rewrites MySQL 8 `utf8mb4_0900_*` collations to MariaDB-compatible ones.
-2. On Cloudways, saves the current database to `local-backup-before-push.sql` in the app's `tmp/` folder (or `private_html/`), **outside** `public_html` and readable only by the app user. It also reads the current `home` URL and `table_prefix`.
+2. On Cloudways, saves the current database to `local-backup-before-push.sql` in a private folder for this site, `.cloudways-connect/<site folder>` in the app's `tmp/` folder (or `private_html/`), **outside** `public_html` and readable only by the app user. A WordPress installed in a subfolder of the app gets its own folder, never one inside the main site's `public_html`. It also reads the current `home` URL and `table_prefix`.
 3. Uploads the dump outside the webroot, then runs `wp db reset` and `wp db import`. If the import fails, it restores the backup automatically. The uploaded dump is always deleted afterwards.
+   - When the database also holds another site's tables (a different table prefix, such as a second WordPress in a subfolder), it drops only this site's tables instead of resetting the whole database, and the backup holds only those tables. If the Local site's table prefix would overwrite the other site's tables, the push stops before changing anything.
 4. Sets `table_prefix` to match Local if the two differ.
-5. Runs `wp search-replace` across all tables (`--precise`, `guid` skipped) for:
+5. Runs `wp search-replace` across all tables (only this site's prefix in a shared database; `--precise`, `guid` skipped) for:
    - `//site.local` → the URL WordPress had on Cloudways;
    - the JSON-escaped form `\/\/site.local`, which block editors and page builders store;
    - `http://` → `https://` when the Cloudways site was on HTTPS.

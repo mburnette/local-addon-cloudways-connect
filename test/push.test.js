@@ -16,6 +16,10 @@ const { Store } = require('../lib/main/store');
 const { shellQuote, describeSshFailure } = require('../lib/main/transport');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'cw-connect-test-'));
+const posixOnly = { skip: process.platform === 'win32' };
+const runSh = (script, { home, env = {} } = {}) => execFileSync('sh', ['-c', script], { env: { ...process.env, ...env, HOME: home }, encoding: 'utf8' });
+/** Matches a per-site private folder: <base>/.cloudways-connect/<slug>-<checksum>. */
+const privateIn = (base, slug) => new RegExp(`^${fs.realpathSync(base).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/\\.cloudways-connect/${slug.replace(/\./g, '\\.')}-\\d+$`);
 
 test('generated public key is valid OpenSSH and fingerprints match ssh-keygen', { skip: process.platform === 'win32' }, () => {
 	const dir = tmp();
@@ -45,7 +49,8 @@ test('discover script finds the Cloudways app-credential layout ($HOME/public_ht
 	});
 	const info = parseKeyValues(out);
 	assert.equal(info.webroot, fs.realpathSync(path.join(home, 'public_html')));
-	assert.equal(info.private, fs.realpathSync(home));
+	assert.match(info.private, privateIn(home, 'public_html'));
+	assert.equal(fs.statSync(info.private).mode & 0o777, 0o700);
 	assert.ok(['yes', 'no'].includes(info.wpcli));
 });
 
@@ -221,7 +226,7 @@ test('discover script picks the app tmp folder when Cloudways makes the app fold
 	fs.chmodSync(home, 0o555);
 	try {
 		const out = execFileSync('sh', ['-c', discoverRemoteScript({ sysUser: 'abcxyz' })], { env: { ...process.env, HOME: home }, encoding: 'utf8' });
-		assert.equal(parseKeyValues(out).private, path.join(fs.realpathSync(home), 'tmp'));
+		assert.match(parseKeyValues(out).private, privateIn(path.join(home, 'tmp'), 'public_html'));
 	} finally {
 		fs.chmodSync(home, 0o755);
 	}
@@ -237,6 +242,81 @@ test('never picks the webroot itself for dumps', { skip: process.platform === 'w
 	assert.ok(info.private && !info.private.startsWith(`${info.webroot}/`));
 });
 
+test('a WordPress in a subfolder of the app gets its own private folder, never one inside the main site\'s public_html', posixOnly, () => {
+	const home = tmp();
+	const web = path.join(home, 'public_html');
+	const blog = path.join(web, 'blog');
+	fs.mkdirSync(blog, { recursive: true });
+	fs.mkdirSync(path.join(home, 'tmp'));
+	fs.writeFileSync(path.join(web, 'wp-config.php'), '<?php');
+	fs.writeFileSync(path.join(blog, 'wp-config.php'), '<?php');
+	fs.chmodSync(home, 0o555);
+	try {
+		const main = parseKeyValues(runSh(discoverRemoteScript({}), { home })).private;
+		// Beside the subfolder webroot are public_html/tmp, public_html/private_html and public_html itself: all served.
+		const sub = parseKeyValues(runSh(discoverRemoteScript({ remotePath: blog }), { home })).private;
+		assert.match(main, privateIn(path.join(home, 'tmp'), 'public_html'));
+		assert.match(sub, privateIn(path.join(home, 'tmp'), 'public_html_blog'));
+		assert.notEqual(main, sub);
+	} finally {
+		fs.chmodSync(home, 0o755);
+	}
+	assert.ok(!fs.existsSync(path.join(web, '.cloudways-connect')));
+});
+
+test('apps reached through the master user\'s home never share a private folder', posixOnly, () => {
+	const home = path.join(tmp(), 'master');
+	const apps = ['abcxyz', 'defuvw'];
+	apps.forEach((app) => {
+		fs.mkdirSync(path.join(home, 'applications', app, 'public_html'), { recursive: true });
+		fs.writeFileSync(path.join(home, 'applications', app, 'public_html', 'wp-config.php'), '<?php');
+		// No tmp/ or private_html/ and an app folder the user can't write to: both fall back to ~/tmp.
+		fs.chmodSync(path.join(home, 'applications', app), 0o555);
+	});
+	fs.mkdirSync(path.join(home, 'tmp'));
+	try {
+		const privates = apps.map((app) => parseKeyValues(runSh(discoverRemoteScript({ sysUser: app }), { home })).private);
+		assert.match(privates[0], privateIn(path.join(home, 'tmp'), 'applications_abcxyz_public_html'));
+		assert.match(privates[1], privateIn(path.join(home, 'tmp'), 'applications_defuvw_public_html'));
+	} finally {
+		apps.forEach((app) => fs.chmodSync(path.join(home, 'applications', app), 0o755));
+	}
+});
+
+test('rsync sends remote paths through the protocol, so a folder with a space is not split by the server\'s shell', async () => {
+	const { Transport } = require('../lib/main/transport');
+	const transport = new Transport({ host: '203.0.113.7', username: 'abcxyz', privateKeyPath: '/k', workDir: tmp(), logger: {} });
+	const runs = [];
+	transport._bin = () => '/fake/rsync-3.1.3';
+	transport._spawn = async (cmd, args) => {
+		if (args[0] === '--version') return { code: 0, stdout: 'rsync  version 3.1.3  protocol version 31\n', stderr: '' };
+		runs.push(args);
+		return { code: 0, stdout: '', stderr: '' };
+	};
+	await transport.rsyncUp({ source: '/local/', destination: '/home/1.cloudwaysapps.com/abcxyz/public_html/old site/', extraArgs: ['--delete'] });
+	await transport.rsyncDown({ source: '/home/1.cloudwaysapps.com/abcxyz/public_html/old site/', destination: '/local/' });
+	runs.forEach((args) => assert.ok(args.includes('--protect-args'), args.join(' ')));
+	assert.equal(runs[0][runs[0].length - 1], 'abcxyz@203.0.113.7:/home/1.cloudwaysapps.com/abcxyz/public_html/old site/');
+});
+
+test('an rsync without --protect-args (macOS openrsync) is asked once, and refuses remote paths the shell could split', async () => {
+	const { Transport } = require('../lib/main/transport');
+	const transport = new Transport({ host: '203.0.113.7', username: 'abcxyz', privateKeyPath: '/k', workDir: tmp(), logger: {} });
+	transport._bin = () => '/fake/openrsync';
+	const runs = [];
+	transport._spawn = async (cmd, args) => {
+		runs.push(args);
+		if (args[0] === '--version') return { code: 0, stdout: 'openrsync: protocol version 29\nrsync version 2.6.9 compatible\n', stderr: '' };
+		return { code: 0, stdout: '', stderr: '' };
+	};
+	await transport.rsyncUp({ source: '/local/', destination: '/home/1.cloudwaysapps.com/abcxyz/public_html/', extraArgs: ['--delete'] });
+	await transport.rsyncDown({ source: '/home/1.cloudwaysapps.com/abcxyz/public_html/', destination: '/local/' });
+	await assert.rejects(transport.rsyncUp({ source: '/local/', destination: '/home/1.cloudwaysapps.com/abcxyz/public_html/old site/' }), /too old/);
+	assert.equal(runs.filter((a) => a[0] === '--version').length, 1);
+	runs.filter((a) => a[0] !== '--version').forEach((args) => assert.ok(!args.includes('--protect-args'), args.join(' ')));
+	assert.equal(runs.length, 3);
+});
+
 test('only real SSH login failures are reported as a refused key', () => {
 	const t = { username: 'u', host: 'h', port: 22, password: null, knownHostsPath: '/k' };
 	assert.match(describeSshFailure(255, 'u@h: Permission denied (publickey,password).', t), /refused the SSH key/);
@@ -245,4 +325,112 @@ test('only real SSH login failures are reported as a refused key', () => {
 	const msg = describeSshFailure(1, remote, t);
 	assert.doesNotMatch(msg, /refused the SSH key/);
 	assert.match(msg, /A command failed on the Cloudways server \(exit 1\).*Can't create\/write/);
+});
+
+const WEBROOT = '/home/1.cloudwaysapps.com/abcxyz/public_html/blog';
+const PRIVATE = '/home/1.cloudwaysapps.com/abcxyz/tmp/.cloudways-connect/public_html_blog-123';
+const WP = 'wp --skip-plugins --skip-themes';
+
+/** Records every ssh command and rsync call; `respond(command)` gives a command's stdout. */
+function fakeTransport({ respond = () => '' } = {}) {
+	const calls = [];
+	return {
+		calls,
+		execs: () => calls.filter(([kind]) => kind === 'exec').map(([, c]) => c),
+		async exec(command) {
+			calls.push(['exec', command]);
+			if (command.startsWith('for d in ')) {
+				return { code: 0, stdout: `webroot=${WEBROOT}\nprivate=${PRIVATE}\nwpcli=yes\nrsync=yes\n`, stderr: '' };
+			}
+			return { code: 0, stdout: respond(command) || '', stderr: '' };
+		},
+		async rsyncUp(args) {
+			calls.push(['up', args]);
+			return '';
+		},
+		async rsyncDown(args) {
+			calls.push(['down', args]);
+			if (!args.source.endsWith('/')) fs.writeFileSync(args.destination, 'CREATE TABLE `wp_options` (x int);\n');
+			return '';
+		},
+		async close() {},
+	};
+}
+
+/** A SyncService wired to stand-ins for Local's services and a stored (manual) link. */
+function makeService({ transport, localPrefix = 'wp_' }) {
+	const webRoot = path.join(tmp(), 'app', 'public');
+	fs.mkdirSync(webRoot, { recursive: true });
+	const site = { id: 'site1', name: 'Shop', domain: 'shop.local', paths: { webRoot, sql: path.join(webRoot, '..', 'sql') } };
+	let stored = { mode: 'manual', host: '203.0.113.7', port: 22, username: 'abcxyz', authType: 'key', domain: 'shop.example.com', remotePath: WEBROOT };
+	const service = new SyncService({
+		store: { getLink: () => stored, updateLink: (id, patch) => { stored = { ...stored, ...patch }; } },
+		keys: { privateKeyPath: '/nonexistent/key' },
+		workDir: tmp(),
+		getApi: () => null,
+		services: {
+			siteData: { getSite: () => site },
+			siteDatabase: {
+				dump: async (_site, dest) => fs.writeFileSync(dest, 'CREATE TABLE `wp_options` (x int);\n'),
+				getTablePrefix: async () => localPrefix,
+			},
+			siteProcessManager: { getSiteStatus: () => 'running', start: async () => {} },
+			wpCli: { run: async (_site, args) => (args.join(' ') === 'option get home' ? 'http://shop.local\n' : '') },
+		},
+		sendIPCEvent: () => {},
+		logger: { info() {}, warn() {}, error() {}, debug() {} },
+	});
+	service.transportFor = () => transport;
+	return service;
+}
+
+const PUSH_DB_ONLY = { files: false, backup: false, purgeCache: false };
+
+test('a database push on its own database still resets it and keeps the backup in the site\'s private folder', async () => {
+	const transport = fakeTransport({ respond: (c) => (/db export/.test(c) ? 'table_prefix=wp_\ntables=wp_options wp_posts \nhome=https://shop.example.com/blog\n' : '') });
+	await makeService({ transport }).push('site1', PUSH_DB_ONLY);
+	const execs = transport.execs();
+	const exportCmd = execs.find((c) => /db export/.test(c));
+	assert.ok(exportCmd.includes(`${WP} db export '${PRIVATE}/local-backup-before-push.sql' \${o:+--tables="$o"}`), exportCmd);
+	assert.ok(execs.some((c) => c.includes(`${WP} db reset --yes && ${WP} db import '${PRIVATE}/local-push-`)));
+	assert.ok(execs.filter((c) => /search-replace/.test(c)).every((c) => c.includes(' --all-tables ')));
+});
+
+test('the push backup and the pull export hold only the site\'s own tables (run with sh and a stand-in wp)', posixOnly, async () => {
+	const bin = tmp();
+	fs.writeFileSync(path.join(bin, 'wp'), `#!/bin/sh\ncase "$*" in *"config get table_prefix"*) echo blog_;; *"db query SHOW TABLES"*) printf 'wp_options\\nblog_options\\nblog_posts\\n';; *"db export"*) echo "$*" > "$OUT";; esac\n`, { mode: 0o755 });
+	const out = path.join(tmp(), 'export-args');
+	for (const direction of ['push', 'pull']) {
+		const transport = fakeTransport();
+		await makeService({ transport })[direction]('site1', direction === 'push' ? PUSH_DB_ONLY : { files: false }).catch(() => {});
+		// The real command, run in a scratch folder with the stand-in wp.
+		const exportCmd = transport.execs().find((c) => /db export/.test(c)).replace(`cd '${WEBROOT}'`, 'cd /');
+		const state = parseKeyValues(runSh(exportCmd, { home: tmp(), env: { OUT: out, PATH: `${bin}${path.delimiter}${process.env.PATH}` } }));
+		assert.equal(state.table_prefix, 'blog_');
+		assert.match(fs.readFileSync(out, 'utf8'), / --tables=blog_options,blog_posts --no-tablespaces=true/);
+		if (direction === 'push') assert.equal(state.tables, 'wp_options blog_options blog_posts');
+	}
+});
+
+test('a database shared with another site: push replaces only its own tables, and never writes over the other site\'s', async () => {
+	const state = (prefix) => `table_prefix=${prefix}\ntables=wp_options wp_posts blog_options blog_posts \nhome=https://shop.example.com/blog\n`;
+	const run = async (remotePrefix, localPrefix) => {
+		const transport = fakeTransport({ respond: (c) => (/db export/.test(c) ? state(remotePrefix) : '') });
+		const result = await makeService({ transport, localPrefix }).push('site1', PUSH_DB_ONLY).then(() => null, (e) => e);
+		return { error: result, execs: transport.execs(), uploads: transport.calls.filter(([kind]) => kind === 'up') };
+	};
+
+	// Same prefix as the remote site: its own tables are dropped instead of the whole database.
+	const same = await run('blog_', 'blog_');
+	assert.equal(same.error, null);
+	const importCmd = same.execs.find((c) => /db import/.test(c));
+	assert.ok(importCmd.includes(`db query 'DROP TABLE IF EXISTS \`blog_options\`, \`blog_posts\`' && ${WP} db import`), importCmd);
+	assert.ok(!same.execs.some((c) => /db reset/.test(c)), 'the other site\'s tables are never dropped');
+	assert.ok(same.execs.filter((c) => /search-replace/.test(c)).every((c) => c.includes('--all-tables-with-prefix')));
+
+	// Local's wp_ tables would overwrite the main site's: nothing is uploaded or changed.
+	const clash = await run('blog_', 'wp_');
+	assert.match(clash.error.message, /Cloudways database also holds tables of another site \(wp_options, wp_posts\).*prefix \(wp_\) would overwrite wp_options, wp_posts.*Change the Local site's table prefix to blog_/);
+	assert.equal(clash.uploads.length, 0);
+	assert.ok(!clash.execs.some((c) => /db import|db reset|DROP TABLE/.test(c)));
 });
