@@ -20,6 +20,7 @@
     "lib",
     "icon.svg",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {

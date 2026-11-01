@@ -4,11 +4,11 @@
  * Publishes a new version as a GitHub release that installed copies of the add-on pick up as an update.
  *
  *   npm run release -- patch            0.1.0 -> 0.1.1 (also: minor, major, or an exact version like 0.3.0)
- *   npm run release -- minor --notes "Adds pull to a new site"
  *   npm run release -- patch --dry-run  bump, test and pack, but don't commit, push or publish
  *
- * Steps: checks the working tree is clean, runs lint + tests, bumps the version, packs the .tgz with its bundled
- * dependencies, commits and tags vX.Y.Z, pushes, then creates the GitHub release with the .tgz attached (once under
+ * Steps: checks the working tree is clean and CHANGELOG.md has notes under "## Unreleased", runs lint + tests, bumps
+ * the version, moves those notes under the new version's heading, packs the .tgz with its bundled dependencies,
+ * commits and tags vX.Y.Z, pushes, then creates the GitHub release with the notes and the .tgz attached (once under
  * its versioned name and once under a fixed name for the website's "latest" link).
  */
 
@@ -20,9 +20,8 @@ const { githubRepoFrom } = require('../lib/main/updater');
 const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const notesIndex = args.indexOf('--notes');
-const notes = notesIndex >= 0 ? args[notesIndex + 1] : null;
-const bump = args.find((a, i) => !a.startsWith('--') && (notesIndex < 0 || i !== notesIndex + 1));
+const bump = args.find((a) => !a.startsWith('--'));
+const changelogPath = path.join(root, 'CHANGELOG.md');
 
 const run = (cmd, cmdArgs, opts = {}) => execFileSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit', ...opts });
 const read = (cmd, cmdArgs) => execFileSync(cmd, cmdArgs, { cwd: root, encoding: 'utf8' }).trim();
@@ -38,6 +37,16 @@ if (!bump || !/^(patch|minor|major|\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?)$/.test(bump)
 if (read('git', ['status', '--porcelain'])) fail('Commit or stash your changes first; a release is built from a clean working tree.');
 const branch = read('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 if (branch !== 'main') fail(`Releases are made from main (you're on ${branch}).`);
+
+// The notes under "## Unreleased" become this version's changelog entry and the GitHub release notes.
+const changelog = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, 'utf8') : '';
+const unreleased = changelog.search(/^## Unreleased\b/m);
+if (unreleased < 0) fail('CHANGELOG.md needs a "## Unreleased" section.');
+const notesStart = changelog.indexOf('\n', unreleased) + 1;
+const nextVersion = changelog.slice(notesStart).search(/^## /m);
+const notesEnd = nextVersion < 0 ? changelog.length : notesStart + nextVersion;
+const notes = changelog.slice(notesStart, notesEnd).trim();
+if (!notes) fail('Write what changed under "## Unreleased" in CHANGELOG.md and commit it first.');
 // Installed copies find their updates through package.json's repository field, so a release without it can never update.
 const repo = githubRepoFrom(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')));
 if (!repo) fail('Set "repository" in package.json to the GitHub repo (owner/name) that hosts the releases.');
@@ -60,6 +69,8 @@ run('npm', ['version', bump, '--no-git-tag-version']);
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const tag = `v${pkg.version}`;
 if (read('git', ['tag', '--list', tag])) fail(`${tag} already exists.`);
+const date = new Date().toLocaleDateString('en-CA');
+fs.writeFileSync(changelogPath, `${changelog.slice(0, notesStart)}\n## ${pkg.version} - ${date}\n\n${notes}\n\n${changelog.slice(notesEnd)}`);
 
 console.log('→ Packing');
 const tgz = read('npm', ['pack', '--silent']).split('\n').pop();
@@ -71,23 +82,20 @@ const latestPath = path.join(root, latestName);
 fs.copyFileSync(tgzPath, latestPath);
 
 if (dryRun) {
-	run('git', ['checkout', '--', 'package.json', 'package-lock.json']);
+	run('git', ['checkout', '--', 'package.json', 'package-lock.json', 'CHANGELOG.md']);
 	fs.rmSync(latestPath);
 	console.log(`\n✓ Dry run finished. ${tgz} is ready to try with Local's Add-ons → Install from disk; nothing was committed or published.`);
 	process.exit(0);
 }
 
 console.log(`→ Committing and tagging ${tag}`);
-run('git', ['add', 'package.json', 'package-lock.json']);
+run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md']);
 run('git', ['commit', '-m', `Release ${tag}`]);
 run('git', ['tag', '-a', tag, '-m', `${pkg.productName} ${pkg.version}`]);
 run('git', ['push', '--follow-tags', 'origin', 'main']);
 
 console.log('→ Publishing the GitHub release');
-const releaseArgs = ['release', 'create', tag, tgzPath, latestPath, '--title', `${pkg.productName} ${pkg.version}`];
-if (notes) releaseArgs.push('--notes', notes);
-else releaseArgs.push('--generate-notes');
-run('gh', releaseArgs);
+run('gh', ['release', 'create', tag, tgzPath, latestPath, '--title', `${pkg.productName} ${pkg.version}`, '--notes', notes]);
 fs.rmSync(tgzPath);
 fs.rmSync(latestPath);
 

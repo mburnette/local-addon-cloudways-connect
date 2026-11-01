@@ -13,8 +13,10 @@ offers to restart Local.
 
 ## Make a release
 
-1. Commit your changes to `main`.
-2. Run one of these:
+1. Write what changed under `## Unreleased` in [CHANGELOG.md](CHANGELOG.md), one bullet per change, in words a user
+   would understand. Leave the version number out; the script adds it.
+2. Commit your changes to `main`.
+3. Run one of these:
 
    ```bash
    npm run release -- patch
@@ -25,17 +27,24 @@ offers to restart Local.
    - `major` for breaking changes (0.1.0 → 1.0.0)
    - an exact version, such as `npm run release -- 0.3.0`
 
-   Add `--notes "What changed"` to write the release notes yourself. Without it, GitHub lists the commits since the last release.
-
 The script:
 
-1. stops if you have uncommitted changes or aren't on `main`;
+1. stops if you have uncommitted changes, aren't on `main`, or have nothing under `## Unreleased`;
 2. runs `npm run lint` and `npm test`;
 3. bumps the version in `package.json`;
-4. packs the `.tgz`;
-5. commits `Release vX.Y.Z`, tags it and pushes;
-6. creates the GitHub release with two copies of the `.tgz` attached: `local-addon-cloudways-connect-X.Y.Z.tgz` and
-   `local-addon-cloudways-connect.tgz`.
+4. moves the `## Unreleased` notes under a new `## X.Y.Z - date` heading in `CHANGELOG.md`;
+5. packs the `.tgz`;
+6. commits `Release vX.Y.Z`, tags it and pushes;
+7. creates the GitHub release with those notes and two copies of the `.tgz` attached:
+   `local-addon-cloudways-connect-X.Y.Z.tgz` and `local-addon-cloudways-connect.tgz`.
+
+To check a build without publishing anything, run:
+
+```bash
+npm run release -- patch --dry-run
+```
+
+It leaves the `.tgz` in the folder so you can try it with Local's **Add-ons → Install from disk**.
 
 ## Download link for the website
 
@@ -47,14 +56,7 @@ https://github.com/mburnette/local-addon-cloudways-connect/releases/latest/downl
 ```
 
 The release script prints the exact link when it finishes. Like the in-app updater, it skips drafts and pre-releases.
-
-To check a build without publishing anything, run:
-
-```bash
-npm run release -- patch --dry-run
-```
-
-It leaves the `.tgz` in the folder so you can try it with Local's **Add-ons → Install from disk**.
+The website reads the version number from the same GitHub release, so it updates on its own too.
 
 ## Things to know
 
