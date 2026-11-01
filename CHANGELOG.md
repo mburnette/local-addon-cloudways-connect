@@ -5,6 +5,8 @@ turns that section into the new version's entry and uses it as the GitHub releas
 
 ## Unreleased
 
+## 1.1.1 - 2026-10-31
+
 - Pushing to a folder whose path has a space no longer splits the path on the server, which could make a push
   with **Delete files on Cloudways that are not in Local** land in the wrong folder.
 - The database backup made before a push now goes in a folder of its own for each site (`.cloudways-connect/…` in the

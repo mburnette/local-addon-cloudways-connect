@@ -1,7 +1,7 @@
 {
   "name": "local-addon-cloudways-connect",
   "productName": "ConnectLocal for Cloudways",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Push Local sites (files, database, or both) to Cloudways, the same way Local Connect pushes to WP Engine and Flywheel.",
   "author": "Marcus Burnette",
   "license": "MIT",
