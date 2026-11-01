@@ -22,7 +22,7 @@ const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const notesIndex = args.indexOf('--notes');
 const notes = notesIndex >= 0 ? args[notesIndex + 1] : null;
-const bump = args.find((a, i) => !a.startsWith('--') && i !== notesIndex + 1);
+const bump = args.find((a, i) => !a.startsWith('--') && (notesIndex < 0 || i !== notesIndex + 1));
 
 const run = (cmd, cmdArgs, opts = {}) => execFileSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit', ...opts });
 const read = (cmd, cmdArgs) => execFileSync(cmd, cmdArgs, { cwd: root, encoding: 'utf8' }).trim();
