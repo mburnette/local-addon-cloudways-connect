@@ -1,4 +1,4 @@
-# Releasing Host Connect for Cloudways
+# Releasing ConnectLocal for Cloudways
 
 Every GitHub release with a `.tgz` attached is an update. Installed copies check for one when Local starts and every
 12 hours after that, or right away from **Check for updates** at the bottom of the add-on's panel. When there is
@@ -9,6 +9,7 @@ offers to restart Local.
 
 1. Install the GitHub CLI and sign in. Run `brew install gh`, then `gh auth login`.
 2. Install the dependencies in this folder with `npm install`. The release bundles `@getflywheel/local-components` and `lodash` into the `.tgz`, so they must be installed.
+3. Make sure `repository` in `package.json` names the public GitHub repo, currently `github:mburnette/local-addon-cloudways-connect`. Installed copies look for updates there, and the release script stops if it is missing or doesn't match the repo this folder pushes to.
 
 ## Make a release
 
@@ -33,7 +34,19 @@ The script:
 3. bumps the version in `package.json`;
 4. packs the `.tgz`;
 5. commits `Release vX.Y.Z`, tags it and pushes;
-6. creates the GitHub release with the `.tgz` attached.
+6. creates the GitHub release with two copies of the `.tgz` attached: `local-addon-cloudways-connect-X.Y.Z.tgz` and
+   `local-addon-cloudways-connect.tgz`.
+
+## Download link for the website
+
+The copy without a version number keeps the same name in every release, so this link always downloads the newest
+full release:
+
+```
+https://github.com/mburnette/local-addon-cloudways-connect/releases/latest/download/local-addon-cloudways-connect.tgz
+```
+
+The release script prints the exact link when it finishes. Like the in-app updater, it skips drafts and pre-releases.
 
 To check a build without publishing anything, run:
 
